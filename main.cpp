@@ -9,42 +9,100 @@ MicroBit uBit;
 #define RED     0xF800
 #define GREEN   0x07E0
 
-void displaySendString(char str[15], int color);
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Funktionen für Displayanzeige
+//  Autor:      Eric Suter
+// 
+//////////////////////////////////////////////////////
+
 void spiSendByte(int eightbits);
-void initDisplay(void);
+void displaySendString(char str[15], int color);
+void displayInit(void);
 void displaySendChar(char Charakter, char cursor, int color);
 void displayClear(void);
 
-char uhrzeit[15] = "14:30 Uhr";
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Funktionen für I2C übertragung
+//  Autor:      Eric Suter
+// 
+//////////////////////////////////////////////////////
+
+void clockReadData(void);
+void clockWriteData(void);
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Funktionen Menüführung
+//  Autor:      Yves Ackermann
+// 
+//////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Funktionen Datenaufbereitung
+//  Autor:      Yves Ackermann
+// 
+//////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Hauptablauf des Programms
+//  Autor:      Yves Ackermann & Eric Suter
+// 
+//////////////////////////////////////////////////////
+
+uint8_t buffer[19] = {0};
+
+char uhrzeit[15] = "XX:XX Uhr";                 //  String für Anzeigen der Zeit
 
 int main(){
 
-    uBit.init();
+    uBit.init();                                // Initialisieren des uBits
+    uBit.sleep(10);
 
-    uBit.io.P12.setDigitalValue(1);
-    uBit.io.P13.setDigitalValue(0);            // Initialisieren der SPI Pins
+    uBit.io.P12.setDigitalValue(1);             // Initialisieren der SPI Pins
+    uBit.io.P13.setDigitalValue(0);            
     uBit.io.P14.setDigitalValue(0);
     uBit.io.P15.setDigitalValue(0);
     uBit.io.P16.setDigitalValue(1);
     uBit.sleep(10);
 
-    initDisplay();                              // DIsplay initialisieren
+    displayInit();                              // DIsplay initialisieren
+    uBit.sleep(10);
     displayClear();                             // Display leeren
-    displaySendString(uhrzeit, RED);          // Sende String in Farbe
+    uBit.sleep(10);
+    displaySendString(uhrzeit, BLUE);           // Sende String in Farbe
+    uBit.sleep(100);
 
     while(1){
 
-     uBit.sleep(10);       
+        //clockReadData();
+        //clockWriteData();
+        uBit.sleep(1000);       
 
     }
 }
+
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt:  Ausprogrammierung der Funktionen
+// 
+//////////////////////////////////////////////////////
+
 
 void spiSendByte(int eightbits){
 
     uBit.io.P16.setDigitalValue(0);             // Set ChipSelect to Low
     int Daten = eightbits;
-    int temporaer = 0;
-    int i = 0;
+    int temporaer = 0;                          // Buffer für die zu verarbeitenden Daten
+    int i = 0;                                  // Zähler
     
     for(i = 0; i<8; i++){                       // For schleife zum übertragen von 8 Bits
 
@@ -68,7 +126,7 @@ void spiSendByte(int eightbits){
 }
 
 
-void initDisplay(void){
+void displayInit(void){
     
 
     uBit.sleep(10);
@@ -478,13 +536,13 @@ const char font[256][8]={                   // Ascii font für Display
 {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}   // 0xFF
 };
 
-    char temp = Charakter;
-    char Pixelbit = 0;
-    char temp2 = 0;
+    char temp = Charakter;                              // Buffer für zu verarbeitende Daten
+    char Pixelbit = 0;                                  // Speicher für aktuellen Pixelwert
+    char temp2 = 0;                                     // Buffer für zu verarbeitende Daten
 
-    for (int i = 1; i < 9; i++){               // For schleife für 8 Pixelbahnen für Ascii charakter
+    for (int i = 1; i < 9; i++){                        // For schleife für 8 Pixelbahnen für Ascii charakter
 
-        Pixelbit = font[temp][i-1];             // Daten aus Array schreiben auf Display
+        Pixelbit = font[temp][i-1];                     // Daten aus Array schreiben auf Display
         
 
         for (int y = 1; y < 9; y++){                    // For schleife für 8 Pixel innerhalb der Zeile
@@ -527,9 +585,9 @@ const char font[256][8]={                   // Ascii font für Display
 
 void displaySendString(char str[15], int color){
 
-    for(int i = 0; i <= 14; i++){                   // Für alle Chars im String
+    for(int i = 0; i <= 14; i++){                       // Für alle Chars im String
 
-        displaySendChar(str[i], i, color);          // Einzelne glieder des Maximal 15 char langen strings senden und Farbe des Textes wählen
+        displaySendChar(str[i], i, color);              // Einzelne glieder des Maximal 15 char langen strings senden und Farbe des Textes wählen
 
     }
 }
@@ -537,26 +595,53 @@ void displaySendString(char str[15], int color){
 void displayClear(void){
 
     uBit.io.P15.setDigitalValue(INSTRUCTION);
-    spiSendByte(0x2a);                          // Cursor in X Achse setzen                                            
+    spiSendByte(0x2a);                                  // Cursor in X Achse setzen                                            
     uBit.io.P15.setDigitalValue(DATA);
     spiSendByte(0x00);  
     spiSendByte(0x00);  
     spiSendByte(0x00);   
     spiSendByte(0x80);
     uBit.io.P15.setDigitalValue(INSTRUCTION);
-    spiSendByte(0x2b);                          // Cursor in Y Achse setzen                                            
+    spiSendByte(0x2b);                                  // Cursor in Y Achse setzen                                            
     uBit.io.P15.setDigitalValue(DATA);
     spiSendByte(0x00);  
     spiSendByte(0x00);  
     spiSendByte(0x00);   
     spiSendByte(0x80);      
     uBit.io.P15.setDigitalValue(INSTRUCTION);
-    spiSendByte(0x2c);                          // Instruktion es folgen Daten
+    spiSendByte(0x2c);                                  // Instruktion es folgen Daten
     uBit.io.P15.setDigitalValue(DATA);
 
-    for (int i = 32768; i >= 0; i--){           // Alle Pixel beschreiben
+    for (int i = 32768; i >= 0; i--){                   // Alle Pixel beschreiben
 
-        spiSendByte(0x00);                      // Hintergrund Schwarz
+        spiSendByte(0x00);                              // Hintergrund Schwarz
 
     } 
+}
+
+
+void clockReadData(void){
+
+    uBit.i2c.read(0xD0, buffer, 19);                    // Auslesen der 19 Register des DS3231 
+
+}
+
+void clockWriteData(void){
+
+    uint8_t writeRegister[20];
+
+    writeRegister[0] = 0x00;                            // Startaddresse für Schreibzyklus laut Datenblatt des DS3231
+
+    for(int i = 0; i >= 19; i++){                            // Schreibregister befüllen
+
+
+        writeRegister[i+1] = buffer[i];
+
+
+    }
+
+
+    uBit.i2c.write(0xD0, writeRegister, 20);             // Schreiben aller Register des DS3231 RTC IC
+
+
 }
