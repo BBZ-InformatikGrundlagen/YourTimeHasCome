@@ -1,4 +1,5 @@
 #include "MicroBit.h"
+#include <cstdio>
 
 MicroBit uBit;
 
@@ -61,7 +62,7 @@ void alarm_set(void);
 
 uint8_t buffer[19] = {0};
 
-char uhrzeit[15] = "xx:xx Uhr";                 //  String für Anzeigen der Zeit
+char uhrzeit[100] = "xx:xx Uhr";                 //  String für Anzeigen der Zeit
 
 int main(){
 
@@ -87,6 +88,11 @@ int main(){
     while(1){
 		
 		clockReadData();
+		displayClear();                             // Display leeren
+		uBit.sleep(10);
+		displaySendString(uhrzeit, BLUE);
+		uBit.sleep(2000);
+	
 		
 		if(uBit.io.P5.getDigitalValue() == 0 && uBit.io.P11.getDigitalValue() == 0){
 			uBit.display.scroll("Menu",100);
@@ -154,20 +160,23 @@ void setTime(void){
 	
 	uBit.display.scroll("Min",100);	
 	int min = getValue(0,59);
-/*	
+
 	uint8_t regSec = 0; 
-	uint8_t regMin = (min \ 10);
+	uint8_t regMin = (min / 10);
             regMin <<= 4;
-            regMin += (min % 10)			
+            regMin += (min % 10);			
 
-	uint8_t regHour = (hour \ 10) 
-            regHour <<= 4;
-            regHour += (min % 10)			
+	uint8_t regHour = 0;
+	if (hour >= 20){
+		regHour = 0x20;
+	} else if (hour >= 10){
+		regHour = 0x10;
+	}
+    regHour += (hour % 10);			
 
-    uBit.i2c.write(0x00, regSec, 1);
-    uBit.i2c.write(0x10, regMin; 1);
-    uBit.i2c.write(0x20, regHour, 1);
-*/
+    uBit.i2c.write(0xD0, &regSec, 1);
+    uBit.i2c.write(0xD1, &regMin, 1);
+    uBit.i2c.write(0xD2, &regHour, 1);
 }
 
 void alarm_set(void){
@@ -707,9 +716,22 @@ void displayClear(void){
 void clockReadData(void){
 
     uBit.i2c.read(0xD0, buffer, 19);                    // Auslesen der 19 Register des DS3231 
-	uint8_t minute = buffer [1];
-	minute = (minute & 0xF)*10 + ((minute & 0xF0)>>4);
-	uBit.display.scroll(buffer[1]);
+	uint8_t minute = 0;
+	minute = ((buffer [1] & 0xF0) >> 4 ) * 10;
+	minute += (buffer [1] & 0x0F);
+	
+	uint8_t hour = 0;
+	if (buffer[2] & 0x10 ){
+		hour = 10;
+	}
+	else if (buffer[2] & 0x20 ){
+		hour = 20;
+	}
+	hour += (buffer[2] & 0x0F);
+	
+	sprintf(uhrzeit, "%02d:%02d Uhr", hour, minute );
+	uBit.display.scroll(uhrzeit);
+
 }
 
 void clockWriteData(void){
@@ -731,3 +753,6 @@ void clockWriteData(void){
 
 
 }
+
+
+
