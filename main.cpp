@@ -39,8 +39,10 @@ void clockWriteData(void);
 // 
 //////////////////////////////////////////////////////
 
-
-
+int getValue(int, int);
+void program_start(int prog);
+void setTime(void);
+void alarm_set(void);
 //////////////////////////////////////////////////////
 //
 //  Abschnitt:  Funktionen Datenaufbereitung
@@ -59,7 +61,7 @@ void clockWriteData(void);
 
 uint8_t buffer[19] = {0};
 
-char uhrzeit[15] = "XX:XX Uhr";                 //  String für Anzeigen der Zeit
+char uhrzeit[15] = "xx:xx Uhr";                 //  String für Anzeigen der Zeit
 
 int main(){
 
@@ -71,24 +73,107 @@ int main(){
     uBit.io.P14.setDigitalValue(0);
     uBit.io.P15.setDigitalValue(0);
     uBit.io.P16.setDigitalValue(1);
-    uBit.sleep(10);
-
-    displayInit();                              // DIsplay initialisieren
+	uBit.sleep(10);
+	
+	int programm =0;							//Initialisieren Grundfunktion
+	
+    displayInit();                              // Display initialisieren
     uBit.sleep(10);
     displayClear();                             // Display leeren
     uBit.sleep(10);
     displaySendString(uhrzeit, BLUE);           // Sende String in Farbe
     uBit.sleep(100);
-
+	
     while(1){
-
-        //clockReadData();
-        //clockWriteData();
-        uBit.sleep(1000);       
-
-    }
+		
+		clockReadData();
+		
+		if(uBit.io.P5.getDigitalValue() == 0 && uBit.io.P11.getDigitalValue() == 0){
+			uBit.display.scroll("Menu",100);
+			programm = getValue(0,1);
+			program_start(programm);
+		}
+		
+	}     
+	
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt: Programmierung der Grundfunktion
+//
+//////////////////////////////////////////////////////
+
+int getValue (int minValue, int maxValue){ 
+	int value = 0;
+	int range = (maxValue-minValue)+1;
+
+	bool button_B_pressed = false;
+	
+	uBit.display.scroll(value+minValue,100);
+	
+	while(uBit.io.P5.getDigitalValue() == 1){	
+		
+		if(uBit.io.P11.getDigitalValue() == 1){
+			button_B_pressed = false;
+		}
+		else{
+				
+			if(!button_B_pressed){
+				
+				value = (value + 1) % range;
+				uBit.display.scrollAsync(value+minValue,100);
+			}
+				
+			button_B_pressed = true;
+		}
+	}	
+	return(value+minValue);
+}
+
+void program_start(int prog){
+	
+		switch(prog){
+		
+			case 0:
+			setTime();
+			break;
+		
+			case 1:
+			alarm_set();
+			break;
+		}
+		
+	}
+
+void setTime(void){
+	
+	uBit.display.scroll("Hour",100);	
+	int hour = getValue(0,23);
+	
+	uBit.display.scroll("Min",100);	
+	int min = getValue(0,59);
+/*	
+	uint8_t regSec = 0; 
+	uint8_t regMin = (min \ 10);
+            regMin <<= 4;
+            regMin += (min % 10)			
+
+	uint8_t regHour = (hour \ 10) 
+            regHour <<= 4;
+            regHour += (min % 10)			
+
+    uBit.i2c.write(0x00, regSec, 1);
+    uBit.i2c.write(0x10, regMin; 1);
+    uBit.i2c.write(0x20, regHour, 1);
+*/
+}
+
+void alarm_set(void){
+uBit.display.print("A");
+uBit.sleep(1000);	
+}
 
 //////////////////////////////////////////////////////
 //
@@ -124,7 +209,6 @@ void spiSendByte(int eightbits){
     }
     uBit.io.P16.setDigitalValue(1);             // Set ChipSelect to High
 }
-
 
 void displayInit(void){
     
@@ -623,7 +707,9 @@ void displayClear(void){
 void clockReadData(void){
 
     uBit.i2c.read(0xD0, buffer, 19);                    // Auslesen der 19 Register des DS3231 
-
+	uint8_t minute = buffer [1];
+	minute = (minute & 0xF)*10 + ((minute & 0xF0)>>4);
+	uBit.display.scroll(buffer[1]);
 }
 
 void clockWriteData(void){
