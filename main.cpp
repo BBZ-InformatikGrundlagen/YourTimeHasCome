@@ -158,25 +158,23 @@ void setTime(void){
 	uBit.display.scroll("Hour",100);	
 	int hour = getValue(0,23);
 	
+	uint8_t hourhigh = (hour >> 4) % 10;
+	uint8_t hourlow = (hour % 10);
+	
 	uBit.display.scroll("Min",100);	
 	int min = getValue(0,59);
 
-	uint8_t regSec = 0; 
-	uint8_t regMin = (min / 10);
-            regMin <<= 4;
-            regMin += (min % 10);			
-
-	uint8_t regHour = 0;
-	if (hour >= 20){
-		regHour = 0x20;
-	} else if (hour >= 10){
-		regHour = 0x10;
-	}
-    regHour += (hour % 10);			
-
-    uBit.i2c.write(0xD0, &regSec, 1);
-    uBit.i2c.write(0xD1, &regMin, 1);
-    uBit.i2c.write(0xD2, &regHour, 1);
+	uint8_t minutehigh = (min >> 4) % 10;
+	uint8_t minutelow = (min % 10);
+	
+	
+	uint8_t hourBcd = (hourhigh << 4) | hourlow;
+	uint8_t minBcd = (minutehigh << 4) | minutelow;
+	
+	buffer[2] = minBcd;
+	buffer[3] = hourBcd;
+	
+	clockWriteData();
 }
 
 void alarm_set(void){
@@ -716,20 +714,21 @@ void displayClear(void){
 void clockReadData(void){
 
     uBit.i2c.read(0xD0, buffer, 19);                    // Auslesen der 19 Register des DS3231 
-	uint8_t minute = 0;
-	minute = ((buffer [1] & 0xF0) >> 4 ) * 10;
-	minute += (buffer [1] & 0x0F);
 	
-	uint8_t hour = 0;
-	if (buffer[2] & 0x10 ){
-		hour = 10;
-	}
-	else if (buffer[2] & 0x20 ){
-		hour = 20;
-	}
-	hour += (buffer[2] & 0x0F);
+	uint8_t minutehigh = 0;
+	uint8_t minutelow = 0;
 	
-	sprintf(uhrzeit, "%02d:%02d Uhr", hour, minute );
+	minutehigh = ((buffer [2] & 0xF0) >> 4 );
+	minutelow = (buffer [2] & 0x0F);
+	
+	uint8_t hourhigh = 0;
+	uint8_t hourlow = 0;
+	
+	hourhigh = ((buffer [3] & 0xF0) >> 4 );
+	hourlow = (buffer[3] & 0x0F);
+	
+	sprintf(uhrzeit, "%01d%01d:%01d%01d Uhr", hourhigh, hourlow, minutehigh, minutelow );
+	
 	uBit.display.scroll(uhrzeit);
 
 }
