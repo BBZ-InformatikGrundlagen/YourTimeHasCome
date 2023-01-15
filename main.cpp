@@ -1,4 +1,5 @@
 #include "MicroBit.h"
+#include <cstdio>
 
 MicroBit uBit;
 
@@ -39,8 +40,10 @@ void clockWriteData(void);
 // 
 //////////////////////////////////////////////////////
 
-
-
+int getValue(int, int);
+void program_start(int prog);
+void setTime(void);
+void alarm_set(void);
 //////////////////////////////////////////////////////
 //
 //  Abschnitt:  Funktionen Datenaufbereitung
@@ -59,7 +62,7 @@ void clockWriteData(void);
 
 uint8_t buffer[19] = {0};
 
-char uhrzeit[15] = "XX:XX Uhr";                 //  String für Anzeigen der Zeit
+char uhrzeit[100] = "xx:xx Uhr";                 //  String für Anzeigen der Zeit
 
 int main(){
 
@@ -72,23 +75,119 @@ int main(){
     uBit.io.P15.setDigitalValue(0);
     uBit.io.P16.setDigitalValue(1);
     uBit.sleep(10);
-
-    displayInit();                              // DIsplay initialisieren
+    
+    int programm =0;                            //Initialisieren Grundfunktion
+    
+    displayInit();                              // Display initialisieren
     uBit.sleep(10);
     displayClear();                             // Display leeren
     uBit.sleep(10);
     displaySendString(uhrzeit, BLUE);           // Sende String in Farbe
     uBit.sleep(100);
-
+    
     while(1){
-
-        //clockReadData();
-        //clockWriteData();
-        uBit.sleep(1000);       
-
-    }
+        
+        clockReadData();
+        displayClear();                             // Display leeren
+        uBit.sleep(10);
+        displaySendString(uhrzeit, BLUE);
+        uBit.sleep(2000);
+    
+        
+        if(uBit.io.P5.getDigitalValue() == 0 && uBit.io.P11.getDigitalValue() == 0){
+            uBit.display.scroll("Menu",100);
+            programm = getValue(0,1);
+            program_start(programm);
+        }
+        
+    }     
+    
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Abschnitt: Programmierung der Grundfunktion
+//
+//////////////////////////////////////////////////////
+
+int getValue (int minValue, int maxValue){ 
+    int value = 0;
+    int range = (maxValue-minValue)+1;
+
+    bool button_B_pressed = false;
+    
+    uBit.display.scroll(value+minValue,100);
+    
+    while(uBit.io.P5.getDigitalValue() == 1){   
+        
+        if(uBit.io.P11.getDigitalValue() == 1){
+            button_B_pressed = false;
+        }
+        else{
+                
+            if(!button_B_pressed){
+                
+                value = (value + 1) % range;
+                uBit.display.scrollAsync(value+minValue,100);
+            }
+                
+            button_B_pressed = true;
+        }
+    }   
+    return(value+minValue);
+}
+
+void program_start(int prog){
+    
+        switch(prog){
+        
+            case 0:
+            setTime();
+            break;
+        
+            case 1:
+            alarm_set();
+            break;
+        }
+        
+    }
+
+void setTime(void){
+    
+    uBit.display.scroll("Hour",100);    
+    int hour = getValue(0,23);
+    
+    uint8_t hourlow = (hour % 10);    
+    uint8_t hourhigh = (hour >> 4);
+    hourhigh = hourhigh %10;
+    
+    uBit.display.scroll("Min",100); 
+    int min = getValue(0,59);
+    
+    uint8_t minutelow = (min % 10);
+    uint8_t minutehigh = (min >> 4);
+    minutehigh = minutehigh  % 10;
+    
+    
+    
+    uint8_t hourBcd = (hourhigh << 4);
+    hourBcd |= hourlow;
+
+
+    uint8_t minBcd = (minutehigh << 4);
+    minBcd |= minutelow;
+
+    buffer[2] = minBcd;
+    buffer[3] = hourBcd;
+    
+    clockWriteData();
+}
+
+void alarm_set(void){
+uBit.display.print("A");
+uBit.sleep(1000);   
+}
 
 //////////////////////////////////////////////////////
 //
@@ -124,7 +223,6 @@ void spiSendByte(int eightbits){
     }
     uBit.io.P16.setDigitalValue(1);             // Set ChipSelect to High
 }
-
 
 void displayInit(void){
     
@@ -623,25 +721,52 @@ void displayClear(void){
 void clockReadData(void){
 
     uBit.i2c.read(0xD0, buffer, 19);                    // Auslesen der 19 Register des DS3231 
+    
+    uint8_t minutehigh = 0;
+    uint8_t minutelow = 0;
+    
+    minutehigh = ((buffer[2] & 0xF0) >> 4 );
+    minutelow = (buffer[2] & 0x0F);
+    
+    uint8_t hourhigh = 0;
+    uint8_t hourlow = 0;
+    
+    hourhigh = ((buffer[3] & 0xF0) >> 4 );
+    hourlow = (buffer[3] & 0x0F);
+    
+    sprintf(uhrzeit, "%01d%01d:%01d%01d Uhr", hourhigh, hourlow, minutehigh, minutelow );
+    
+    uBit.display.scroll(uhrzeit);
 
 }
 
 void clockWriteData(void){
 
     uint8_t writeRegister[20];
-
-    writeRegister[0] = 0x00;                            // Startaddresse für Schreibzyklus laut Datenblatt des DS3231
-
-    for(int i = 0; i >= 19; i++){                            // Schreibregister befüllen
-
-
-        writeRegister[i+1] = buffer[i];
-
-
-    }
+    writeRegister[0] = 0x00;
+    writeRegister[1] = 0x01;
+    writeRegister[2] = buffer[2];
+    writeRegister[3] = buffer[3];
+    writeRegister[4] = 0x04;
+    writeRegister[5] = 0x05;
+    writeRegister[6] = 0x06;
+    writeRegister[7] = 0x07;
+    writeRegister[8] = 0x08;
+    writeRegister[9] = 0x09;
+    writeRegister[10] = 0x10;
+    writeRegister[11] = 0x11;
+    writeRegister[12] = 0x00;
+    writeRegister[13] = 0x00;
+    writeRegister[14] = 0x00;
+    writeRegister[15] = 0x00;
+    writeRegister[16] = 0x00;
+    writeRegister[17] = 0x00;
+    writeRegister[18] = 0x00;
+    writeRegister[19] = 0x00;
 
 
     uBit.i2c.write(0xD0, writeRegister, 20);             // Schreiben aller Register des DS3231 RTC IC
 
 
 }
+
