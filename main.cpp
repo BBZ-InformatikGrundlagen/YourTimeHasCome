@@ -44,14 +44,6 @@ int getValue(int, int);
 void program_start(int prog);
 void setTime(void);
 void alarm_set(void);
-//////////////////////////////////////////////////////
-//
-//  Abschnitt:  Funktionen Datenaufbereitung
-//  Autor:      Yves Ackermann
-// 
-//////////////////////////////////////////////////////
-
-
 
 //////////////////////////////////////////////////////
 //
@@ -87,17 +79,25 @@ int main(){
     
     while(1){
         
-        clockReadData();
+        clockReadData();                            // Auslesen des RTC IC und Daten in array speichern
         displayClear();                             // Display leeren
+
         uBit.sleep(10);
-        displaySendString(uhrzeit, BLUE);
-        uBit.sleep(2000);
-    
+        displaySendString(uhrzeit, BLUE);           // Zeit auf dem LCD in Blauer schrift anzeigen
+        uBit.sleep(2000);                           // 2s Warten zwischen Zyklen um Displaylesbarkeit zu garantieren
         
-        if(uBit.io.P5.getDigitalValue() == 0 && uBit.io.P11.getDigitalValue() == 0){
-            uBit.display.scroll("Menu",100);
-            programm = getValue(0,1);
-            program_start(programm);
+        
+        if((buffer[13] == buffer[2]) && (buffer[14] == buffer [3])){            // Wenn das Wecker Bit von RTC IC gelesen wurde
+
+            uBit.io.P0.setDigitalValue(1);             // Beeper Einschalten
+
+        }
+        else{   uBit.io.P0.setDigitalValue(0);  }           // Beeper Ausschalten 
+
+        if(uBit.io.P5.getDigitalValue() == 0 && uBit.io.P11.getDigitalValue() == 0){    // Abfrage ob beide Taster gedrückt wurden
+            uBit.display.scroll("Menu",100);    // Wenn ja Menu einstellungen anzeigen
+            programm = getValue(0,1);   // Fragen ob Zeit einstellen oder Alarm
+            program_start(programm);    // Abfrage starten
         }
         
     }     
@@ -117,9 +117,9 @@ int getValue (int minValue, int maxValue){
 
     bool button_B_pressed = false;
     
-    uBit.display.scroll(value+minValue,100);
+    uBit.display.scroll(value+minValue,100);     
     
-    while(uBit.io.P5.getDigitalValue() == 1){   
+    while(uBit.io.P5.getDigitalValue() == 1){  
         
         if(uBit.io.P11.getDigitalValue() == 1){
             button_B_pressed = false;
@@ -140,7 +140,7 @@ int getValue (int minValue, int maxValue){
 
 void program_start(int prog){
     
-        switch(prog){
+        switch(prog){   // wählen zwischen Zeit einstellen und Wecker einstellen
         
             case 0:
             setTime();
@@ -154,39 +154,36 @@ void program_start(int prog){
     }
 
 void setTime(void){
-    
-    uBit.display.scroll("Hour",100);    
-    int hour = getValue(0,23);
-    
-    uint8_t hourlow = (hour % 10);    
-    uint8_t hourhigh = (hour >> 4);
-    hourhigh = hourhigh %10;
-    
-    uBit.display.scroll("Min",100); 
-    int min = getValue(0,59);
-    
-    uint8_t minutelow = (min % 10);
-    uint8_t minutehigh = (min >> 4);
-    minutehigh = minutehigh  % 10;
-    
-    
-    
-    uint8_t hourBcd = (hourhigh << 4);
-    hourBcd |= hourlow;
 
+    uBit.display.scroll("Set Time",100); // Anzeige Zeit einstellen
+    uBit.display.scroll("H",100);       // Anzeige Stunden
+    int hour = getValue(0,23);          // Wert zwischen 0 und 23 abfragen
+     
+    uBit.display.scroll("M",100);   // Anzeige Minuten einstellen
+    int min = getValue(0,59);   // Wert zwischen 0 und 59 abfragen
 
-    uint8_t minBcd = (minutehigh << 4);
-    minBcd |= minutelow;
-
-    buffer[2] = minBcd;
-    buffer[3] = hourBcd;
+    buffer[2] = ((min / 10)<<4) | (min % 10); // Minuten in BCD wandeln und in Array schreiben für übertragung an RTC IC
+    buffer[3] = ((hour / 10)<<4) | (hour % 10); // Stunden in BCD und in Array
     
     clockWriteData();
+
 }
 
 void alarm_set(void){
-uBit.display.print("A");
-uBit.sleep(1000);   
+
+    uBit.display.scroll("Set Alarm",100); // Anzeige 
+    uBit.display.scroll("H",100);    // Anzeige Stunden
+    int hour = getValue(0,23);// Wert zwischen 0 und 23 abfragen
+    
+    uBit.display.scroll("M",100); // Anzeige Minuten einstellen
+    int min = getValue(0,59);// Wert zwischen 0 und 59 abfragen
+
+
+    buffer[12] = ((min / 10)<<4) | (min % 10); // Minuten in BCD wandeln und in Array schreiben für übertragung an RTC IC
+    buffer[13] = ((hour / 10)<<4) | (hour % 10); // Stunden in BCD und in Array
+    
+    clockWriteData();
+
 }
 
 //////////////////////////////////////////////////////
@@ -731,22 +728,57 @@ void clockReadData(void){
     uint8_t hourhigh = 0;
     uint8_t hourlow = 0;
     
-    hourhigh = ((buffer[3] & 0xF0) >> 4 );
+    hourhigh = ((buffer[3] & 0xF0) >> 4 );      // Daten für BCD aufbereiten
     hourlow = (buffer[3] & 0x0F);
     
-    sprintf(uhrzeit, "%01d%01d:%01d%01d Uhr", hourhigh, hourlow, minutehigh, minutelow );
+    sprintf(uhrzeit, "%01d%01d:%01d%01d Uhr", hourhigh, hourlow, minutehigh, minutelow );   // Stringaufbereitung für LCD Display
     
-    uBit.display.scroll(uhrzeit);
+    //uBit.display.scroll(uhrzeit);             // Für debugging zwecke anzeige in Textform auf LED Matrix
+    
+    unsigned char pixelArray[5][5];             // Array für übersetzung in uBit kompatibilität
+    for(int i= 0; i<= 3; i++){                  // For schleife zum befüllen der ersten Zeile Stunden high
 
+        pixelArray[0][i] = (hourhigh >> i) & 0x01;
+
+    }
+    for(int i= 0; i<= 3; i++){                  // For schleife zum befüllen der zweiten Zeile Stunden low
+
+        pixelArray[1][i] = (hourlow >> i) & 0x01;
+
+    }
+    for(int i= 0; i<= 3; i++){                  // For schleife zum befüllen der vierten Zeile Minuten high
+
+        pixelArray[2][i] = (minutehigh >> i) & 0x01;
+
+    }
+    for(int i= 0; i<= 3; i++){                  // For schleife zum befüllen der fünften Zeile Minuten low
+
+        pixelArray[3][i] = (minutelow >> i) & 0x01;
+
+    }
+
+    uBit.display.setDisplayMode(DISPLAY_MODE_BLACK_AND_WHITE);   // Dot Matrix schwarz weiss modus
+     const uint8_t timeA[] = { 0, pixelArray[0][3], pixelArray[0][2], pixelArray[0][1], pixelArray[0][0], 
+                               0, 0, 0, 0, 0, 
+                               0, pixelArray[1][3], pixelArray[1][2], pixelArray[1][1], pixelArray[1][0], 
+                               0, pixelArray[0][3], pixelArray[0][2], pixelArray[0][1], pixelArray[0][0],
+                               1, 1, 1, 1, 1, 
+                               0, pixelArray[2][3], pixelArray[2][2], pixelArray[2][1], pixelArray[2][0], 
+                               0, pixelArray[2][3], pixelArray[2][2], pixelArray[2][1], pixelArray[2][0],  
+                               0, pixelArray[3][3], pixelArray[3][2], pixelArray[3][1], pixelArray[3][0], 
+                               0, pixelArray[3][3], pixelArray[3][2], pixelArray[3][1], pixelArray[3][0], 
+                               0, 0, 0, 0, 0, }; // Zeit in eindimensionalen string für uBit
+     MicroBitImage i(10,5,timeA); // Image für anzeige erstellen und mit Matrix beschreiben
+     uBit.display.print(i); // Anzeige auf der Matrix
 }
 
 void clockWriteData(void){
 
-    uint8_t writeRegister[20];
+    uint8_t writeRegister[20];  // register erstellen und befüllen für übertragung an RTC IC
     writeRegister[0] = 0x00;
     writeRegister[1] = 0x01;
-    writeRegister[2] = buffer[2];
-    writeRegister[3] = buffer[3];
+    writeRegister[2] = buffer[2];   // Minuten Zeit
+    writeRegister[3] = buffer[3];   // Stunden Zeit
     writeRegister[4] = 0x04;
     writeRegister[5] = 0x05;
     writeRegister[6] = 0x06;
@@ -755,9 +787,9 @@ void clockWriteData(void){
     writeRegister[9] = 0x09;
     writeRegister[10] = 0x10;
     writeRegister[11] = 0x11;
-    writeRegister[12] = 0x00;
-    writeRegister[13] = 0x00;
-    writeRegister[14] = 0x00;
+    writeRegister[12] = 0x12;
+    writeRegister[13] = buffer[12]; // Wecker Min
+    writeRegister[14] = buffer[13]; // Wecker H
     writeRegister[15] = 0x00;
     writeRegister[16] = 0x00;
     writeRegister[17] = 0x00;
