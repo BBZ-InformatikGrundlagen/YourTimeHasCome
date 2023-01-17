@@ -7,13 +7,13 @@ Die Navigation durch alle Menüs sind einheitlich. drücke Knopf B um den aktuel
 ## Menüauswahl
 Um zur Menüauswahl zu gelangen drücke beide Knöpfe (Knopf A und Knopf B), bis der Text "Menu" auf dem 5x5 LED Feld erscheint.
 Mit dem ersten Menü wählt man zwischen Uhrzeit einstellen (Menu "0") oder Wecker einstellen (Menu "1").
-Anschliessend wird auf dem 5x5 LED Feld angezeigt, was eingestellt wird (z.B. Hour oder Min). Wenn man die Zeit (Uhrzeit oder Weckzeit) fertig eingestellt hat, wird automatisch wieder zur Zeitanzeige gewechselt.
+Anschliessend wird auf dem 5x5 LED Feld angezeigt, was eingestellt wird (z.B. H = Stunden oder M = Minuten). Wenn man die Zeit (Uhrzeit oder Weckzeit) fertig eingestellt hat, wird automatisch wieder zur Zeitanzeige gewechselt.
 
 ### Der Wecker 
 Der Wecker ertönt eine Minute lang zur gewählten Uhrzeit.
 
 ### Anzeige der Zahlen beim einstellen
-Man muss nicht zwingend jedes Mal warten bis die Zahl verschwunden ist, um die Zeit einstellen zu können. Die letzte gesehene Zahl ist die aktuelle Zahl.
+Man muss nicht zwingend jedes Mal warten bis die Zahl verschwunden ist, um die Zeit weiter einstellen zu können. Die letzte gesehene Zahl ist die aktuelle Wert.
 
 # Beispiel
 
