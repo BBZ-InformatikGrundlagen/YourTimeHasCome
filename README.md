@@ -11,6 +11,14 @@ Für das Projekt wird benötigt:
 - Verbinden Sie Ihren Microbit mit ihrem Computer (Bluetooth oder Kabel möglich)
 - Laden Sie den heruntergeladenen Code auf Ihren Microbit.
 
+## Auslesen des 5x5 Pixelfeldes
+auf dem 5x5 Pixelfeld des Microbits werden die zahlen wie folgt angezeigt.
+- in der obersten Reihe werden die Zehnerstunden angezeigt.
+- in der zweit obersten Reihe werden die Einerstunden angezeigt.
+- die Mittlere Reihe ist die abtrennung von Stunden und Minuten.
+- in der zweit untersten Reihe werden die Zehnerminuten angezeigt.
+- in der untersten Reihe werden die Einerminuten angezeigt.
+
 ## Menüauswahl
 Um zur Menüauswahl zu gelangen drücke beide Knöpfe (Knopf A und Knopf B), bis der Text "Menu" auf dem 5x5 LED Feld erscheint.
 Mit dem ersten Menü wählt man zwischen Uhrzeit einstellen (Menu "0") oder Wecker einstellen (Menu "1").
