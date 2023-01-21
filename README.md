@@ -1,6 +1,16 @@
 # YourTimeHasCome
 Projekt von Eric Suter und Yves Ackermann
 
+## Hardwarekomponenten
+Für das Projekt wird benötigt:
+- Real-time-clock Modul => DS3231
+- externes Display (SPI)
+
+## Getting Started
+- Laden Sie die Datei Main.cpp from repository herunter.
+- Verbinden Sie Ihren Microbit mit ihrem Computer (Bluetooth oder Kabel möglich)
+- Laden Sie den heruntergeladenen Code auf Ihren Microbit.
+
 ## Menüauswahl
 Um zur Menüauswahl zu gelangen drücke beide Knöpfe (Knopf A und Knopf B), bis der Text "Menu" auf dem 5x5 LED Feld erscheint.
 Mit dem ersten Menü wählt man zwischen Uhrzeit einstellen (Menu "0") oder Wecker einstellen (Menu "1").
